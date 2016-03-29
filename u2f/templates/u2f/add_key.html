@@ -1,0 +1,37 @@
+{% load staticfiles %}
+{% load argonauts %}
+{% load i18n %}
+<script src="/static/u2f-api.js"></script>
+Add-key stuff here
+
+<script>
+    function handleU2FError(resp) {
+        if ( resp.errorCode ) {
+            document.getElementById('u2f-status').textContent = 'Error with U2F';
+            return true;
+        } else {
+            return false;
+        }
+    }
+    if ( typeof window.u2f === 'undefined' )
+      document.getElementById('u2f-not-defined-error').style.display = 'block';
+</script>
+
+<form method="post" id="u2f-form">
+    {% csrf_token %}
+    <input id="id_response" name="response" type="text" />
+</form>
+
+<script>
+    var challenge = {{ challenge|safe }};
+    var signRequests = {{ challenge|safe }};
+
+    // Submit the form
+    u2f.register([challenge], signRequests, function(resp) {
+        var form = document.getElementById('u2f-form');
+        form.response.value = JSON.stringify(resp);
+        if ( ! handleU2FError(resp) ) {
+            form.submit();
+        }
+    })
+</script>

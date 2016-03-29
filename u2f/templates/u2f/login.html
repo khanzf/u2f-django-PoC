@@ -1,0 +1,9 @@
+<html>
+    <form method=POST>
+    {% csrf_token %}
+    <table>
+        {{ loginprompt }}
+    </table>
+    <button><img src="/static/login.png" width="10%" height="5%"/></button>
+    </form>
+</html>
