@@ -21,4 +21,3 @@ class U2FKey(models.Model):
             'keyHandle': self.key_handle,
             'appId': self.app_id,
         }
-

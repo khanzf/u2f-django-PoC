@@ -20,7 +20,7 @@ Nothing here
     {% csrf_token %}
     {{ u2f_response }}
 </form>
-
+Update 1
 <script>                                                                     
     var challenges = {{ challenges|safe }};
     u2f.sign(challenges, function(resp) { 

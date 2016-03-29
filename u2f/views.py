@@ -24,9 +24,11 @@ def login(request):
                 if user.u2f_keys.count() > 0:
                     print("There is a key registered")
                     request.session['authuser'] = user.pk;
+                    request.session['backend'] = user.backend
                     return HttpResponseRedirect('/twofactor/')
                 else:
-                    print("Redirecting to twofactor")
+                    print("Redirecting to Add_keyr")
+                    print(user.backend)
                     auth.login(request, user)
                     return HttpResponseRedirect('/add_key/')
 
@@ -50,10 +52,10 @@ def add_key(request):
                 key_handle=device['keyHandle'],
                 app_id=device['appId'],
             )
-            print("Added key")
-            print(device, attestation_cert)
+            print("%s\n\n\n%s" % (device, attestation_cert))
             return HttpResponseRedirect('/dashboard/')
 
+    # Else if its a GET variable
     # Send them the request
     origin = '{scheme}://{host}'.format(
                 scheme='https' if request.is_secure() else 'http',
@@ -61,10 +63,10 @@ def add_key(request):
              )
     challenge = u2f.start_register(origin)
     request.session['u2f_registration_challenge'] = challenge
-    sign_requests = [u2f.start_authenticate(d.to_json()) for d in request.user.u2f_keys.all()]
+#    sign_requests = [u2f.start_authenticate(d.to_json()) for d in request.user.u2f_keys.all()]
 
-    context = {'challenge': json.dumps(challenge),
-               'sign_requests': sign_requests}
+    context = {'challenge': json.dumps(challenge)}
+#               'sign_requests': sign_requests}
 
     return render(request, 'u2f/add_key.html', context)
 
@@ -72,52 +74,44 @@ def twofactor(request):
     print("All u2f keys")
 
     user = User.objects.get(pk=request.session['authuser'])
+    print("The user is: %s" % user)
     challenges = [u2f.start_authenticate(u2f_key.to_json()) for u2f_key in user.u2f_keys.all()]
 
     if request.method == 'POST':
         u2f_response = KeyResponseForm(request.POST)
 
         if u2f_response.is_valid():
+            device_response = u2f_response.cleaned_data['response']
+            challenge = request.session['u2f_authentication_challenges'][0]
 
-            u2f_response_json = json.loads(u2f_response.cleaned_data['response'])
-            print("-------------> %s" % u2f_response_json)
+            device = user.u2f_keys.get() #key_handle=device_response['keyHandle'])
+            print("Check this: %s" % device)
 
-            for c in challenges:
-                print("ARBOR: %s" % c['keyHandle'])
-                if c['keyHandle'] == u2f_response_json['keyHandle']:
-                    challenge = dict(c)
-                
-            device = user.u2f_keys.get(key_handle=c['keyHandle'])
+#            u2f_response_json = json.dumps(u2f_response.cleaned_data['response'])
+            u2f_response_json = u2f_response.cleaned_data['response']
 
-            print("Blue letter boy")
-            print("device.to_json %s\t\ttype: %s" % (device.to_json(), type(device.to_json())) )
-            print("challenge      %s\t\ttype: %s" % (challenge, type(challenge)))
-            print("u2f_response   %s\t\ttype: %s" % (u2f_response_json, type(u2f_response_json)))
-            print("Blue letter boy")
-
-
-            login_counter, touch_asserted = u2f.verify_authenticate(
-                device.to_json(),
-                challenge,
-                u2f_response_json
-            )
-            device.last_used_at = timezone.now()
-            device.save()
+            login_counter, touch_asserted = u2f.verify_authenticate(device.to_json(), challenge, u2f_response_json,)
+            print("Touch asserted: %s" % touch_asserted)
+#            device.last_used_at = timezone.now()
+#            device.save()
             del request.session['u2f_authentication_challenges']
-            auth.login(request, user)
+            user.backend = request.session['backend']
+            del request.session['backend']
+            auth.login(request, user=user)
             return HttpResponseRedirect('/dashboard/')
     else:
         u2f_response = KeyResponseForm()
         print("The user is currently: %s" % user)
-        for u2f_key in user.u2f_keys.all():
-            print("AAAAAAAAAAAAA")
-            print(u2f_key.to_json())
-            print("BBBBBBBBBBBBB")
+#        challenges = [user.u2f_keys.get().to_json()]
+#        print(challenges)
+        challenges = [u2f.start_authenticate(user.u2f_keys.get().to_json())]
+        print(challenges)
+        request.session['u2f_authentication_challenges'] = challenges
+#        challenges = [u2f.start_authenticate(u2f_key.to_json()) for u2f_key in user.u2f_keys.all()]
+        print("Final: %s" % str(json.dumps(challenges)))
 
-        challenges = [u2f.start_authenticate(u2f_key.to_json()) for u2f_key in user.u2f_keys.all()]
-
-        context = {'challenges': json.dumps(challenges),
-                   'u2f_response': u2f_response}
+        context = {'u2f_response': u2f_response,
+                   'challenges': json.dumps(challenges)}
         return render(request, 'u2f/twofactor.html', context)
 
 def dashboard(request):
