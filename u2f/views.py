@@ -119,3 +119,7 @@ def twofactor(request):
         context = {'challenges': json.dumps(challenges),
                    'u2f_response': u2f_response}
         return render(request, 'u2f/twofactor.html', context)
+
+def dashboard(request):
+    context = {}
+    return render(request, 'u2f/dashboard.html', context)

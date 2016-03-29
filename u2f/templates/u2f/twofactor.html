@@ -27,7 +27,7 @@ Nothing here
         var form = document.getElementById('u2f-form');
         form.response.value = JSON.stringify(resp);
         if ( ! handleU2FError(resp) ) {
-//            form.submit();
+            form.submit();
         }
     })
 </script>
