@@ -1,0 +1,18 @@
+I wrote this as a proof of concept, mostly because I felt that
+https://github.com/gavinwahl/django-u2f was too confusing to follow and
+included a monkey patch.
+
+The authentication system is not according to best practice, according to
+Django two-factor standards. Additionally, Django has a two-factor application
+that has U2F functionality below:
+https://github.com/Bouke/django-two-factor-auth
+
+You will need to create a new user with:
+./manage.py createsuperuser
+
+When you first login, you will be redirected to add_key(), to add a single new
+U2F key. The second time you attempt to login will require you to login with
+your U2F key.
+
+If you find this confusing or hard to follow, feel free to drop me a line!
+khanzf@gmail.com
